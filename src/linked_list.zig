@@ -22,7 +22,7 @@ pub fn SinglyLinkedList(comptime T: type) type {
             return list;
         }
 
-        pub fn toOwnedSlice(self: *SinglyLinkedList(T), allocator: std.mem.Allocator) ![]T {
+        pub fn toOwnedSlice(self: *const SinglyLinkedList(T), allocator: std.mem.Allocator) ![]T {
             if (self.head == null) {
                 return error.EmptyList;
             }
@@ -135,7 +135,7 @@ pub fn SinglyLinkedList(comptime T: type) type {
             return 0;
         }
 
-        fn getNodeAt(self: *const SinglyLinkedList(T), idx: usize) ?*Node(T) {
+        pub fn getNodeAt(self: *const SinglyLinkedList(T), idx: usize) ?*Node(T) {
             if (self.head) |head_value| {
                 var length: usize = idx;
                 var current: ?*Node(T) = head_value;
