@@ -3,6 +3,18 @@ const meta = @import("meta.zig");
 
 pub fn SinglyLinkedList(comptime T: type) type {
     return struct {
+        pub const Iterator = struct {
+            current: ?*Node(T),
+
+            pub fn next(self: *Iterator) ?*T {
+                if (self.current) |current| {
+                    self.current = current.next;
+                    return &current.value;
+                }
+                return null;
+            }
+        };
+
         head: ?*Node(T) = null,
 
         pub fn clearAndFree(self: *SinglyLinkedList(T), allocator: std.mem.Allocator) void {
@@ -149,6 +161,10 @@ pub fn SinglyLinkedList(comptime T: type) type {
                 return current;
             }
             return null;
+        }
+
+        pub fn iter(self: *SinglyLinkedList(T)) Iterator {
+            return .{ .current = self.head };
         }
     };
 }
