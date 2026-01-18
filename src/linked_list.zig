@@ -55,9 +55,7 @@ pub fn SinglyLinkedList(comptime T: type) type {
                 // Find last element
                 var current: *Node(T) = head_value;
                 while (current.next) |next_value| {
-                    if (next_value.next) |next_next| {
-                        current = next_next;
-                    }
+                    current = next_value;
                 }
                 current.next = new_node;
             } else {
