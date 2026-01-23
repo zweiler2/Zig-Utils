@@ -9,7 +9,7 @@ const Entry = struct {
         allocator.free(self.string);
     }
 
-    pub fn clone(self: *const Entry, allocator: std.mem.Allocator) anyerror!Entry {
+    pub fn dupe(self: *const Entry, allocator: std.mem.Allocator) anyerror!Entry {
         return .{
             .number = self.number,
             .string = try allocator.dupe(u8, self.string),
@@ -28,7 +28,7 @@ test "SinglyLinkedList.fromSlice" {
         .{ .number = 1, .string = "one" },
         .{ .number = 2, .string = "two" },
     };
-    var list: linked_list.SinglyLinkedList(Entry) = try .fromSlice(std.testing.allocator, slice);
+    var list: linked_list.SinglyLinkedList(Entry, null, null, null) = try .fromSlice(std.testing.allocator, slice);
     defer list.clearAndFree(std.testing.allocator);
     try std.testing.expect(list.len() == 3);
 
@@ -38,9 +38,9 @@ test "SinglyLinkedList.fromSlice" {
     try std.testing.expect(entry_at_0.?.number == slice[0].number);
     try std.testing.expect(entry_at_1.?.number == slice[1].number);
     try std.testing.expect(entry_at_2.?.number == slice[2].number);
-    try std.testing.expect(&entry_at_0.?.string != &slice[0].string);
-    try std.testing.expect(&entry_at_1.?.string != &slice[1].string);
-    try std.testing.expect(&entry_at_2.?.string != &slice[2].string);
+    try std.testing.expect(entry_at_0.?.string.ptr != slice[0].string.ptr);
+    try std.testing.expect(entry_at_1.?.string.ptr != slice[1].string.ptr);
+    try std.testing.expect(entry_at_2.?.string.ptr != slice[2].string.ptr);
     try std.testing.expectEqualStrings(slice[0].string, entry_at_0.?.string);
     try std.testing.expectEqualStrings(slice[1].string, entry_at_1.?.string);
     try std.testing.expectEqualStrings(slice[2].string, entry_at_2.?.string);
@@ -63,19 +63,41 @@ test "SinglyLinkedList.fromSlice" {
     try std.testing.expect(!std.mem.eql(u8, entry_at_2.?.string, slice[2].string));
 }
 
+test "SinglyLinkedList.fromOwnedSlice" {
+    const slice = &[_]Entry{
+        .{ .number = 0, .string = try std.testing.allocator.dupe(u8, "zero") },
+        .{ .number = 1, .string = try std.testing.allocator.dupe(u8, "one") },
+        .{ .number = 2, .string = try std.testing.allocator.dupe(u8, "two") },
+    };
+    var list: linked_list.SinglyLinkedList(Entry, null, null, null) = try .fromOwnedSlice(std.testing.allocator, slice);
+    // slice now is invalid memory and we do not test using any slice elements
+    defer list.clearAndFree(std.testing.allocator);
+    try std.testing.expect(list.len() == 3);
+
+    const entry_at_0: ?*Entry = list.getAt(0);
+    const entry_at_1: ?*Entry = list.getAt(1);
+    const entry_at_2: ?*Entry = list.getAt(2);
+    try std.testing.expect(entry_at_0.?.number == 0);
+    try std.testing.expect(entry_at_1.?.number == 1);
+    try std.testing.expect(entry_at_2.?.number == 2);
+    try std.testing.expectEqualStrings("zero", entry_at_0.?.string);
+    try std.testing.expectEqualStrings("one", entry_at_1.?.string);
+    try std.testing.expectEqualStrings("two", entry_at_2.?.string);
+}
+
 test "SinglyLinkedList.toOwnedSlice" {
-    var list: linked_list.SinglyLinkedList(Entry) = .{};
+    var list: linked_list.SinglyLinkedList(Entry, null, null, null) = .{};
     defer list.clearAndFree(std.testing.allocator);
     try std.testing.expect(list.len() == 0);
 
     try list.append(std.testing.allocator, .{
         .number = 0,
-        .string = "zero",
+        .string = try std.testing.allocator.dupe(u8, "zero"),
     });
     try std.testing.expect(list.len() == 1);
     try list.append(std.testing.allocator, .{
         .number = 1,
-        .string = "one",
+        .string = try std.testing.allocator.dupe(u8, "one"),
     });
     try std.testing.expect(list.len() == 2);
 
@@ -99,58 +121,58 @@ test "SinglyLinkedList.toOwnedSlice" {
 }
 
 test "SinglyLinkedList.append" {
-    var list: linked_list.SinglyLinkedList(Entry) = .{};
+    var list: linked_list.SinglyLinkedList(Entry, null, null, null) = .{};
     defer list.clearAndFree(std.testing.allocator);
     try std.testing.expect(list.len() == 0);
 
     try list.append(std.testing.allocator, .{
         .number = 1,
-        .string = "one",
+        .string = try std.testing.allocator.dupe(u8, "one"),
     });
     try std.testing.expect(list.len() == 1);
 }
 
 test "SinglyLinkedList.prepend" {
-    var list: linked_list.SinglyLinkedList(Entry) = .{};
+    var list: linked_list.SinglyLinkedList(Entry, null, null, null) = .{};
     defer list.clearAndFree(std.testing.allocator);
     try std.testing.expect(list.len() == 0);
 
     try list.prepend(std.testing.allocator, .{
         .number = 0,
-        .string = "zero",
+        .string = try std.testing.allocator.dupe(u8, "zero"),
     });
     try std.testing.expect(list.len() == 1);
 
     try list.append(std.testing.allocator, .{
         .number = 2,
-        .string = "two",
+        .string = try std.testing.allocator.dupe(u8, "two"),
     });
     try std.testing.expect(list.len() == 2);
 
     try list.prepend(std.testing.allocator, .{
         .number = 1,
-        .string = "one",
+        .string = try std.testing.allocator.dupe(u8, "one"),
     });
     try std.testing.expect(list.len() == 3);
 }
 
 test "SinglyLinkedList.clone" {
-    var list: linked_list.SinglyLinkedList(Entry) = .{};
+    var list: linked_list.SinglyLinkedList(Entry, null, null, null) = .{};
     defer list.clearAndFree(std.testing.allocator);
     try std.testing.expect(list.len() == 0);
 
     try list.append(std.testing.allocator, .{
         .number = 0,
-        .string = "zero",
+        .string = try std.testing.allocator.dupe(u8, "zero"),
     });
     try std.testing.expect(list.len() == 1);
     try list.append(std.testing.allocator, .{
         .number = 1,
-        .string = "one",
+        .string = try std.testing.allocator.dupe(u8, "one"),
     });
     try std.testing.expect(list.len() == 2);
 
-    var list_clone: linked_list.SinglyLinkedList(Entry) = try list.clone(std.testing.allocator);
+    var list_clone: linked_list.SinglyLinkedList(Entry, null, null, null) = try list.dupe(std.testing.allocator);
     defer list_clone.clearAndFree(std.testing.allocator);
 
     try std.testing.expect(list_clone.len() == 2);
@@ -180,17 +202,17 @@ test "SinglyLinkedList.clone" {
 }
 
 test "SinglyLinkedList.getIdxOf" {
-    var list: linked_list.SinglyLinkedList(Entry) = .{};
+    var list: linked_list.SinglyLinkedList(Entry, null, null, null) = .{};
     defer list.clearAndFree(std.testing.allocator);
     try std.testing.expect(list.len() == 0);
 
     const entry_0: Entry = .{
         .number = 0,
-        .string = "zero",
+        .string = try std.testing.allocator.dupe(u8, "zero"),
     };
     const entry_1: Entry = .{
         .number = 1,
-        .string = "one",
+        .string = try std.testing.allocator.dupe(u8, "one"),
     };
     try list.append(std.testing.allocator, entry_0);
     try std.testing.expect(list.len() == 1);
@@ -204,18 +226,18 @@ test "SinglyLinkedList.getIdxOf" {
 }
 
 test "SinglyLinkedList.getAt" {
-    var list: linked_list.SinglyLinkedList(Entry) = .{};
+    var list: linked_list.SinglyLinkedList(Entry, null, null, null) = .{};
     defer list.clearAndFree(std.testing.allocator);
     try std.testing.expect(list.len() == 0);
 
     try list.append(std.testing.allocator, .{
         .number = 0,
-        .string = "zero",
+        .string = try std.testing.allocator.dupe(u8, "zero"),
     });
     try std.testing.expect(list.len() == 1);
     try list.append(std.testing.allocator, .{
         .number = 1,
-        .string = "one",
+        .string = try std.testing.allocator.dupe(u8, "one"),
     });
     try std.testing.expect(list.len() == 2);
 
@@ -229,25 +251,25 @@ test "SinglyLinkedList.getAt" {
 }
 
 test "SinglyLinkedList.insertAt" {
-    var list: linked_list.SinglyLinkedList(Entry) = .{};
+    var list: linked_list.SinglyLinkedList(Entry, null, null, null) = .{};
     defer list.clearAndFree(std.testing.allocator);
     try std.testing.expect(list.len() == 0);
 
     try list.insertAt(std.testing.allocator, 0, .{
         .number = 0,
-        .string = "zero",
+        .string = try std.testing.allocator.dupe(u8, "zero"),
     });
     try std.testing.expect(list.len() == 1);
 
     try list.append(std.testing.allocator, .{
         .number = 3,
-        .string = "three",
+        .string = try std.testing.allocator.dupe(u8, "three"),
     });
     try std.testing.expect(list.len() == 2);
 
     try list.insertAt(std.testing.allocator, 1, .{
         .number = 2,
-        .string = "two",
+        .string = try std.testing.allocator.dupe(u8, "two"),
     });
     try std.testing.expect(list.len() == 3);
 
@@ -257,19 +279,19 @@ test "SinglyLinkedList.insertAt" {
 }
 
 test "SinglyLinkedList.removeAt" {
-    var list: linked_list.SinglyLinkedList(Entry) = .{};
+    var list: linked_list.SinglyLinkedList(Entry, null, null, null) = .{};
     defer list.clearAndFree(std.testing.allocator);
     try std.testing.expect(list.len() == 0);
 
     try list.append(std.testing.allocator, .{
         .number = 0,
-        .string = "zero",
+        .string = try std.testing.allocator.dupe(u8, "zero"),
     });
     try std.testing.expect(list.len() == 1);
 
     try list.append(std.testing.allocator, .{
         .number = 1,
-        .string = "one",
+        .string = try std.testing.allocator.dupe(u8, "one"),
     });
     try std.testing.expect(list.len() == 2);
 
