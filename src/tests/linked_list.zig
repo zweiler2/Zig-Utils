@@ -301,3 +301,32 @@ test "SinglyLinkedList.removeAt" {
     try list.removeAt(std.testing.allocator, 0);
     try std.testing.expect(list.len() == 0);
 }
+
+test "SinglyLinkedList.iterator" {
+    var list: linked_list.SinglyLinkedList(Entry, null, null, null) = .{};
+    defer list.clearAndFree(std.testing.allocator);
+    try std.testing.expect(list.len() == 0);
+
+    try list.append(std.testing.allocator, .{
+        .number = 0,
+        .string = try std.testing.allocator.dupe(u8, "zero"),
+    });
+    try std.testing.expect(list.len() == 1);
+
+    try list.append(std.testing.allocator, .{
+        .number = 1,
+        .string = try std.testing.allocator.dupe(u8, "one"),
+    });
+    try std.testing.expect(list.len() == 2);
+
+    var iter = list.iter();
+    const zero = iter.next();
+    try std.testing.expect(zero != null);
+    try std.testing.expect(zero.?.number == 0);
+    try std.testing.expectEqualStrings("zero", zero.?.string);
+
+    const one = iter.next();
+    try std.testing.expect(one != null);
+    try std.testing.expect(one.?.number == 1);
+    try std.testing.expectEqualStrings("one", one.?.string);
+}
