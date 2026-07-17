@@ -10,4 +10,5 @@ pub const SegmentedList = @import("segmented_list.zig").SegmentedList;
 test {
     std.testing.refAllDecls(@import("tests/meta.zig"));
     std.testing.refAllDecls(@import("tests/linked_list.zig"));
+    std.testing.refAllDecls(@import("tests/hash.zig"));
 }

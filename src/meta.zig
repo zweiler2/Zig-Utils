@@ -41,6 +41,18 @@ pub fn requireDecl(
     }
 }
 
+pub fn hasDecl(
+    comptime T: type,
+    comptime name: []const u8,
+    comptime ExpectedType: type,
+) bool {
+    comptime if (!@hasDecl(T, name)) {
+        return false;
+    };
+    const ActualType = @TypeOf(@field(T, name));
+    return ExpectedType == ActualType;
+}
+
 pub fn checkFunctionSignature(
     comptime T: type,
     comptime function_name: []const u8,
